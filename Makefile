@@ -1,30 +1,33 @@
-# dm - display manager
+# ds - display manager
 # © Quentin Carbonneaux 2010
+# Large to the purpose of the program by
+# (C) Mytchel Hammond 2015
+
 include config.mk
 
 INCS = -I. -I/usr/include -I${X11INC}
-LIBS = -L/usr/lib -lc -lcrypt -L${X11LIB} -lX11 -lXext
+LIBS = -L/usr/lib -lc -L${X11LIB} -lX11 -lXext
 CFLAGS = -g -ansi -pedantic -Wall ${INCS} ${FEATURES}
 LDFLAGS = ${LIBS}
 
 
-all: dm
+all: ds
 
-dm: dm.o
-	${CC} -o dm ${LDFLAGS} $<
+ds: ds.o
+	${CC} -o ds ${LDFLAGS} ds.o
 
-dm.o: config.h
+ds.o: config.h
 
 clean:
-	-rm *.o dm
+	-rm *.o ds
 
 install: all
-	${INSTALL} -o root dm ${bindir}/dm
-	${INSTALL} -o root dm.1 ${mandir}/dm.1
+	${INSTALL} -o root ds ${bindir}/ds
+	${INSTALL} -o root ds.1 ${mandir}/ds.1
 
 uninstall:
-	-rm ${bindir}/dm
-	-rm ${mandir}/dm.1
+	-rm ${bindir}/ds
+	-rm ${mandir}/ds.1
 	@echo Unsatisfied ? send your remarks at qcarbonneaux@gmail.com
 
 .PHONY: clean install
