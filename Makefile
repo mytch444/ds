@@ -22,8 +22,8 @@ clean:
 	-rm *.o ds
 
 install: all
-	${INSTALL} -o root ds ${bindir}/ds
-	${INSTALL} -o root ds.1 ${mandir}/ds.1
+	${INSTALL} -o ${owner} -g ${group} ds ${bindir}/ds
+	${INSTALL} -o ${owner} -g ${group} ds.1 ${mandir}/ds.1
 
 uninstall:
 	-rm ${bindir}/ds
