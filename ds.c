@@ -64,7 +64,7 @@ die (const char *error, ...) {
 	va_list alist;
 
 	va_start(alist, error);
-	vfprintf(stderr, error, alist);
+	vprintf(error, alist);
 	va_end(alist);
 
 	exit(EXIT_FAILURE);
@@ -118,7 +118,6 @@ spawnwm (struct passwd *pwd) {
 	printf("setting user context: ");
 
 	if (setusercontext(NULL, pwd, pwd->pw_uid, LOGIN_SETALL) != 0) {
-		printf("FAIL\n");
 		die("%s: (session process) cannot set user context\n", progname);
 	} else {
 		printf("success\n");
@@ -200,6 +199,8 @@ startserver (void) {
 int
 main (int argc, char *argv[]) {
 	struct passwd *pwd;
+	int logfd;
+
 	progname = argv[0];
 
 	if (argc != 2) 
@@ -211,12 +212,23 @@ main (int argc, char *argv[]) {
 	if (!(pwd = getpwnam(argv[1]))) 
 		die("Failed to get auth information for user: %s\n", argv[1]);
 
+	logfd = open(log_path, O_WRONLY);
+	if (logfd == -1)
+		die("Error opening log : %s\n", log_path);
+
+	close(STDOUT_FILENO);
+	close(STDERR_FILENO);
+
+	dup2(logfd, STDOUT_FILENO);
+	dup2(logfd, STDERR_FILENO);
+
 	printf("%s (pid: %d)\n", progname, getpid());
 
 	printf("start server\n");
 	startserver();
 
 	printf("runsession\n");
+	
 	setsignal(SIGTERM, killsession);
 	setsignal(SIGINT, killsession);
 	runsession(pwd);

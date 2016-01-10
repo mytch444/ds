@@ -1,34 +1,21 @@
-.TH DM "1" "February 2010" "dm" "Display Manager"
+.TH DM "1" "February 2010" "ds" "Display Starter"
 .SH NAME
-dm \- manual page for dm display manager
+ds \- manual page for ds display starter
 .SH SYNOPSIS
-.B dm
-[\fI-v\fR]
+.B ds
+user
 .SH DESCRIPTION
-dm is a simple and efficient display manager.
+.B ds
+is a simple and efficient display starter.
 .PP
-It manages one display one the local host and let users start their x
-session on it. dm was designed to be a \fBlogin\fR(1) like program. If
-you want to manage several displays you have to launch several times
-dm, one for each display.
-.SH OPTIONS
-.TP
-\fB\-v\fR
-shows copyright information and exits
-.SH USAGE
-Run dm in your init scripts. At startup it will show a login window,
-just type your username and your password to login and launch the
-session you configured before building dm.
+It starts the X server and logs into as given user then runs the script at ~/.xinitrc with the
+users login shell.
 .PP
-Each user can have its own window manager, using for example a local
-\fB.xinitrc\fR file.
-.SH CONTROLLING DM
-.B dm
-will respond to the TERM signal. If this signal is received, dm kills
-the x server then exits.
+.B ds
+will respond to the TERM and INT signals. If one of these signals is received, ds forwards it to the 
+process running the .xinitrc
 .SH AUTHOR
-Written by Quentin Carbonneaux.
+Originally written by Quentin Carbonneaux but heavily modified by Mytchel Hammond
 .SH COPYRIGHT
-Copyright \(co 2010 Quentin Carbonneaux.
 .br
 See the LICENSE file distributed in the package for details.
