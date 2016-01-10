@@ -35,6 +35,8 @@ static struct {
 	char *dsp;
 } xserver;
 
+static pid_t sessionpid = 0;
+
 /* configuration */
 #include <config.h>
 
@@ -42,6 +44,7 @@ static struct {
 static char *cat (char *, char *);
 static void die (const char *, ...);
 static void runsession (struct passwd *);
+static void killsession (int sig);
 static void serverhandler (int);
 static void setsignal (int, void (*) (int));
 static void spawnwm (struct passwd *);
@@ -69,9 +72,7 @@ die (const char *error, ...) {
 
 void
 runsession (struct passwd *pwd) {
-	pid_t pid;
-
-	switch ((pid = fork())) {
+	switch ((sessionpid = fork())) {
 		case -1:
 			perror("fork");
 			die("%s: cannot fork to run client session.\n", progname);
@@ -82,10 +83,15 @@ runsession (struct passwd *pwd) {
 			spawnwm(pwd);
 			break;
 		default:
-			waitpid(pid,NULL,0);
-			printf("%s: session finished (pid %d).\n", progname, pid);
+			waitpid(sessionpid,NULL,0);
+			printf("%s: session finished (pid %d).\n", progname, sessionpid);
 			break;
 	}
+}
+
+void
+killsession (int sig) {
+	kill(sessionpid, sig);
 }
 
 void
@@ -209,7 +215,10 @@ main (int argc, char *argv[]) {
 
 	printf("start server\n");
 	startserver();
+
 	printf("runsession\n");
+	setsignal(SIGTERM, killsession);
+	setsignal(SIGINT, killsession);
 	runsession(pwd);
 
 	printf("killing x server (%d)\n", xserver.pid);
