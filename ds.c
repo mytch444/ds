@@ -212,7 +212,7 @@ main (int argc, char *argv[]) {
 	if (!(pwd = getpwnam(argv[1]))) 
 		die("Failed to get auth information for user: %s\n", argv[1]);
 
-	logfd = open(log_path, O_WRONLY);
+	logfd = open(log_path, O_WRONLY|O_CREAT, 0644);
 	if (logfd == -1)
 		die("Error opening log : %s\n", log_path);
 
@@ -239,4 +239,3 @@ main (int argc, char *argv[]) {
 	exit(EXIT_SUCCESS);
 	return 0;
 }
-
