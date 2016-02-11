@@ -23,11 +23,13 @@
 #include <pwd.h>
 #include <login_cap.h>
 #include <bsd_auth.h>
+#include <util.h>
 
 #define len(X) (sizeof(X)/sizeof(X[0]))
 
 /* variables */
 static char *progname;
+static FILE *log;
 
 static struct {
 	pid_t pid;
@@ -64,9 +66,10 @@ die (const char *error, ...) {
 	va_list alist;
 
 	va_start(alist, error);
-	vprintf(error, alist);
+	vfprintf(log, error, alist);
 	va_end(alist);
 
+	fflush(log);
 	exit(EXIT_FAILURE);
 }
 
@@ -79,12 +82,14 @@ runsession (struct passwd *pwd) {
 			break;
 		case 0:
 			/* drop privileges & spawn wm */
-			printf("dropping privileges and spawning wm\n");
+			fprintf(log, "dropping privileges and spawning wm\n");
+			fflush(log);
 			spawnwm(pwd);
 			break;
 		default:
 			waitpid(sessionpid,NULL,0);
-			printf("%s: session finished (pid %d).\n", progname, sessionpid);
+			fprintf(log, "%s: session finished (pid %d).\n", progname, sessionpid);
+			fflush(log);
 			break;
 	}
 }
@@ -112,24 +117,30 @@ setsignal (int signum, void (*handler) (int)) {
 
 void
 spawnwm (struct passwd *pwd) {
-	char *xinit, *cmd[3], *env[7];
-	int i;
+	char *cmd[2], *env[7];
+	int logfd;
 
-	printf("setting user context: ");
-
-	if (setusercontext(NULL, pwd, pwd->pw_uid, LOGIN_SETALL) != 0) {
-		die("%s: (session process) cannot set user context\n", progname);
-	} else {
-		printf("success\n");
-	}
+	exit(EXIT_FAILURE);
 	
-	xinit = cat(pwd->pw_dir, "/.xinitrc"); 
+	login_fbtab(tty, pwd->pw_uid, pwd->pw_gid);
+	
+	logfd = open(log_path_session, O_RDWR|O_CREAT|O_APPEND, 0600);
+	if (logfd == -1)
+		die("Failed to open session log path: %s\n", log_path_session);
 
-	cmd[0] = pwd->pw_shell;
-	cmd[1] = xinit;
-	cmd[2] = NULL;
+	if (setusercontext(NULL, pwd, pwd->pw_uid, LOGIN_SETALL) != 0)
+		die("%s: (session process) cannot set user context\n", progname);
+	
+	close(STDOUT_FILENO);
+	close(STDERR_FILENO);
+	
+	dup2(logfd, STDOUT_FILENO);
+	dup2(logfd, STDERR_FILENO);
 
-	printf("xinit command: %s %s\n", cmd[0], cmd[1]);
+	cmd[0] = cat(pwd->pw_dir, user_script_suffix);
+	cmd[1] = NULL;
+
+	printf("exec '%s'\n", cmd[0]);
 
 	env[0] = cat("HOME=", pwd->pw_dir);
 	env[1] = cat("LOGNAME=", pwd->pw_name);
@@ -139,14 +150,7 @@ spawnwm (struct passwd *pwd) {
 	env[5] = cat("DISPLAY=", xserver.dsp);
 	env[6] = NULL;
 
-	printf("setting env to:\n");
-	for (i = 0; i < len(env) - 1; i++) {
-		printf("\t%s\n", env[i]);
-	}
-	
-	printf("chdir\n");
 	chdir(pwd->pw_dir);
-	printf("execve\n");
 	execve(cmd[0], cmd, env);
 	die("%s: (session process) cannot run session wm.\n",progname);
 }
@@ -189,7 +193,7 @@ startserver (void) {
 			}
 
 			xserver.dsp = display_name;
-			printf("%s: x server started (dis: %s)"
+			fprintf(log, "%s: x server started (dis: %s)"
 			        "(pid: %d)\n", progname, display_name, pid);
 			setsignal(SIGUSR1,SIG_IGN);
 			break;
@@ -199,7 +203,6 @@ startserver (void) {
 int
 main (int argc, char *argv[]) {
 	struct passwd *pwd;
-	int logfd;
 
 	progname = argv[0];
 
@@ -212,28 +215,26 @@ main (int argc, char *argv[]) {
 	if (!(pwd = getpwnam(argv[1]))) 
 		die("Failed to get auth information for user: %s\n", argv[1]);
 
-	logfd = open(log_path, O_WRONLY|O_CREAT, 0644);
-	if (logfd == -1)
-		die("Error opening log : %s\n", log_path);
+	log = fopen(log_path_main, "w");
+	if (!log)
+		die("Error opening log : %s\n", log_path_main);
 
-	close(STDOUT_FILENO);
-	close(STDERR_FILENO);
+	fprintf(log, "%s (pid: %d)\n", progname, getpid());
+	fflush(log);
 
-	dup2(logfd, STDOUT_FILENO);
-	dup2(logfd, STDERR_FILENO);
-
-	printf("%s (pid: %d)\n", progname, getpid());
-
-	printf("start server\n");
+	fprintf(log, "start server\n");
+	fflush(log);
 	startserver();
 
-	printf("runsession\n");
+	fprintf(log, "runsession\n");
+	fflush(log);
 	
 	setsignal(SIGTERM, killsession);
 	setsignal(SIGINT, killsession);
 	runsession(pwd);
 
-	printf("killing x server (%d)\n", xserver.pid);
+	fprintf(log, "killing x server (%d)\n", xserver.pid);
+	fflush(log);
 	kill(xserver.pid, SIGTERM);
 
 	exit(EXIT_SUCCESS);
