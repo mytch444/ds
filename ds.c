@@ -118,29 +118,14 @@ setsignal (int signum, void (*handler) (int)) {
 void
 spawnwm (struct passwd *pwd) {
 	char *cmd[2], *env[7];
-	int logfd;
 
-	exit(EXIT_FAILURE);
-	
 	login_fbtab(tty, pwd->pw_uid, pwd->pw_gid);
-	
-	logfd = open(log_path_session, O_RDWR|O_CREAT|O_APPEND, 0600);
-	if (logfd == -1)
-		die("Failed to open session log path: %s\n", log_path_session);
 
 	if (setusercontext(NULL, pwd, pwd->pw_uid, LOGIN_SETALL) != 0)
 		die("%s: (session process) cannot set user context\n", progname);
-	
-	close(STDOUT_FILENO);
-	close(STDERR_FILENO);
-	
-	dup2(logfd, STDOUT_FILENO);
-	dup2(logfd, STDERR_FILENO);
 
 	cmd[0] = cat(pwd->pw_dir, user_script_suffix);
 	cmd[1] = NULL;
-
-	printf("exec '%s'\n", cmd[0]);
 
 	env[0] = cat("HOME=", pwd->pw_dir);
 	env[1] = cat("LOGNAME=", pwd->pw_name);
@@ -215,9 +200,9 @@ main (int argc, char *argv[]) {
 	if (!(pwd = getpwnam(argv[1]))) 
 		die("Failed to get auth information for user: %s\n", argv[1]);
 
-	log = fopen(log_path_main, "w");
+	log = fopen(log_path, "w");
 	if (!log)
-		die("Error opening log : %s\n", log_path_main);
+		die("Error opening log : %s\n", log_path);
 
 	fprintf(log, "%s (pid: %d)\n", progname, getpid());
 	fflush(log);

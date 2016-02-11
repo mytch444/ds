@@ -6,7 +6,7 @@
 include config.mk
 
 INCS = -I. -I/usr/include -I${X11INC}
-LIBS = -L/usr/lib -lc -L${X11LIB} -lX11 -lXext
+LIBS = -L/usr/lib -lc -L${X11LIB} -lX11 -lXext -lutil
 CFLAGS = -g -ansi -pedantic -Wall ${INCS} ${FEATURES}
 LDFLAGS = ${LIBS}
 
