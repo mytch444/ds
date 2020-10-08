@@ -1,6 +1,5 @@
 /* See LICENSE for details */
-#define _XOPEN_SOURCE 500
-#define _BSD_SOURCE /* initgroups */
+#define _DEFAULT_SOURCE
 #include <errno.h>
 #include <ctype.h>
 #include <setjmp.h>
@@ -21,9 +20,12 @@
 #include <X11/Xlib.h>
 #include <grp.h>
 #include <pwd.h>
+
+#if __OpenBSD__
 #include <login_cap.h>
 #include <bsd_auth.h>
 #include <util.h>
+#endif
 
 #define len(X) (sizeof(X)/sizeof(X[0]))
 
@@ -119,10 +121,35 @@ void
 spawnwm (struct passwd *pwd) {
 	char *cmd[2], *env[7];
 
+#if __OpenBSD__
+
 	login_fbtab(tty, pwd->pw_uid, pwd->pw_gid);
 
 	if (setusercontext(NULL, pwd, pwd->pw_uid, LOGIN_SETALL) != 0)
 		die("%s: (session process) cannot set user context\n", progname);
+
+#elif __linux__
+
+    if (setgid(pwd->pw_gid) == -1) {
+        perror("setgid");
+        die("%s: (session process) cannot drop privileges.\n",progname);
+    }
+
+    if (initgroups(pwd->pw_name,pwd->pw_gid) == -1) {
+        perror("initgroups");
+        die("%s: (session process) cannot drop privileges.\n",progname);
+    }
+
+    if (setuid(pwd->pw_uid) == -1) {
+        perror("setuid");
+        die("%s: (session process) cannot drop privileges.\n",progname);
+    }
+
+    chdir(pwd->pw_dir);
+
+#else
+#error "Unknown OS"
+#endif
 
 	cmd[0] = cat(pwd->pw_dir, user_script_suffix);
 	cmd[1] = NULL;

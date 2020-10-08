@@ -4,7 +4,13 @@
 char *tty = "/dev/ttyC4";
 
 /* x server command */
-char *xcmd[]  = {"/usr/X11R6/bin/X", ":0", "vt5", NULL};
+#if __OpenBSD__
+char *xcmd[]  = {"/usr/X11R6/bin/X", ":3", "vt5", NULL};
+#elif __linux__
+char *xcmd[]  = {"/usr/bin/Xorg", ":3", "vt5", NULL};
+#else
+#error "Unknown OS"
+#endif
 
 /* x server timeout (seconds) */
 int xtimeout = 15;
